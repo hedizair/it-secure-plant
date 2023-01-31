@@ -1,0 +1,24 @@
+{% set currentRoute = app.request.pathinfo %}
+{% set isUserConnected = is_granted('ROLE_USER') %}
+
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/html">
+    <head>
+        <meta charset="UTF-8">
+        <title>{% block title %}Welcome!{% endblock %}</title>
+    </head>
+
+    <body>
+
+        <header>
+        </header>
+
+        <main >
+            {% block main %}{% endblock %}
+        </main>
+
+        <footer>
+        </footer>
+    </body>
+</html>
