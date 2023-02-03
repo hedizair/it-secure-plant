@@ -1,0 +1,13 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Edit AirCondition{% endblock %}
+
+{% block body %}
+    <h1>Edit AirCondition</h1>
+
+    {{ include('air_condition/_form.html.twig', {'button_label': 'Update'}) }}
+
+    <a href="{{ path('app_air_condition_index') }}">back to list</a>
+
+    {{ include('air_condition/_delete_form.html.twig') }}
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}AirCondition index{% endblock %}
+
+{% block body %}
+    <h1>AirCondition index</h1>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Date</th>
+                <th>Temperature</th>
+                <th>Humidity</th>
+                <th>Atmospheric_pressure</th>
+                <th>actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for air_condition in air_conditions %}
+            <tr>
+                <td>{{ air_condition.id }}</td>
+                <td>{{ air_condition.date ? air_condition.date|date('Y-m-d H:i:s') : '' }}</td>
+                <td>{{ air_condition.temperature }}</td>
+                <td>{{ air_condition.humidity }}</td>
+                <td>{{ air_condition.atmosphericPressure }}</td>
+                <td>
+                    <a href="{{ path('app_air_condition_show', {'id': air_condition.id}) }}">show</a>
+                    <a href="{{ path('app_air_condition_edit', {'id': air_condition.id}) }}">edit</a>
+                </td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="6">no records found</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <a href="{{ path('app_air_condition_new') }}">Create new</a>
+{% endblock %}
