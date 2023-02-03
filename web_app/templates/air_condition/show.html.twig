@@ -1,0 +1,38 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}AirCondition{% endblock %}
+
+{% block body %}
+    <h1>AirCondition</h1>
+
+    <table class="table">
+        <tbody>
+            <tr>
+                <th>Id</th>
+                <td>{{ air_condition.id }}</td>
+            </tr>
+            <tr>
+                <th>Date</th>
+                <td>{{ air_condition.date ? air_condition.date|date('Y-m-d H:i:s') : '' }}</td>
+            </tr>
+            <tr>
+                <th>Temperature</th>
+                <td>{{ air_condition.temperature }}</td>
+            </tr>
+            <tr>
+                <th>Humidity</th>
+                <td>{{ air_condition.humidity }}</td>
+            </tr>
+            <tr>
+                <th>Atmospheric_pressure</th>
+                <td>{{ air_condition.atmosphericPressure }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <a href="{{ path('app_air_condition_index') }}">back to list</a>
+
+    <a href="{{ path('app_air_condition_edit', {'id': air_condition.id}) }}">edit</a>
+
+    {{ include('air_condition/_delete_form.html.twig') }}
+{% endblock %}
