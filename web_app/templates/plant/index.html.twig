@@ -1,0 +1,55 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Plant index{% endblock %}
+
+{% block body %}
+    <h1>Plant index</h1>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Name</th>
+                <th>Scientific_name</th>
+                <th>Flowering_period</th>
+                <th>Flower_color</th>
+                <th>Foliage</th>
+                <th>Hardiness</th>
+                <th>Exposure</th>
+                <th>Ground_information</th>
+                <th>Humidity</th>
+                <th>Planting_period</th>
+                <th>Multiplication_method</th>
+                <th>actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for plant in plants %}
+            <tr>
+                <td>{{ plant.id }}</td>
+                <td>{{ plant.name }}</td>
+                <td>{{ plant.scientificName }}</td>
+                <td>{{ plant.floweringPeriod }}</td>
+                <td>{{ plant.flowerColor }}</td>
+                <td>{{ plant.foliage }}</td>
+                <td>{{ plant.hardiness }}</td>
+                <td>{{ plant.exposure }}</td>
+                <td>{{ plant.groundInformation }}</td>
+                <td>{{ plant.humidity }}</td>
+                <td>{{ plant.plantingPeriod }}</td>
+                <td>{{ plant.multiplicationMethod }}</td>
+                <td>
+                    <a href="{{ path('app_plant_show', {'id': plant.id}) }}">show</a>
+                    <a href="{{ path('app_plant_edit', {'id': plant.id}) }}">edit</a>
+                </td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="13">no records found</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <a href="{{ path('app_plant_new') }}">Create new</a>
+{% endblock %}

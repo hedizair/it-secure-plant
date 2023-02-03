@@ -1,0 +1,37 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}WaterLevel index{% endblock %}
+
+{% block body %}
+    <h1>WaterLevel index</h1>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Id</th>
+                <th>Level</th>
+                <th>Threshold</th>
+                <th>actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for water_level in water_levels %}
+            <tr>
+                <td>{{ water_level.id }}</td>
+                <td>{{ water_level.level }}</td>
+                <td>{{ water_level.threshold }}</td>
+                <td>
+                    <a href="{{ path('app_water_level_show', {'id': water_level.id}) }}">show</a>
+                    <a href="{{ path('app_water_level_edit', {'id': water_level.id}) }}">edit</a>
+                </td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="4">no records found</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+
+    <a href="{{ path('app_water_level_new') }}">Create new</a>
+{% endblock %}

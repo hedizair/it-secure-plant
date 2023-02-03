@@ -1,0 +1,30 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}WaterLevel{% endblock %}
+
+{% block body %}
+    <h1>WaterLevel</h1>
+
+    <table class="table">
+        <tbody>
+            <tr>
+                <th>Id</th>
+                <td>{{ water_level.id }}</td>
+            </tr>
+            <tr>
+                <th>Level</th>
+                <td>{{ water_level.level }}</td>
+            </tr>
+            <tr>
+                <th>Threshold</th>
+                <td>{{ water_level.threshold }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <a href="{{ path('app_water_level_index') }}">back to list</a>
+
+    <a href="{{ path('app_water_level_edit', {'id': water_level.id}) }}">edit</a>
+
+    {{ include('water_level/_delete_form.html.twig') }}
+{% endblock %}
