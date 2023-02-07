@@ -3,13 +3,13 @@
 {% block title %}Dashboard{% endblock %}
 
 {% block main %}
-
-
     <div class="container mt-5">
-
         <div class="mb-5">
-            <h1 class="text-center"> Your Dashboard </h1>
+            <h1 class="text-center">Your Dashboard</h1>
+            <h2 class="text-center">Plant : {{ plant.name }}</h2>
+            <h3 class="text-center">Area : {{ area.name }}</h3>
         </div>
+
         <div class="row">
             <div class="col-sm-3">
                 <div class="card text-dark bg-warning mb-3">
@@ -17,36 +17,32 @@
                         <div class="h-100 d-flex flex-row ">
                             <i class=" bi bi-thermometer-sun" style="font-size: 30px"></i>
                             <h3 class="h3 mx-1 my-auto">Temperature</h3>
-
                         </div>
                     </div>
                     <div class="card-body">
-                        <h5 class="card-title">Value : 27 °</h5>
-                        <p>
-                            Always pay attention to the temperature to which your plant is exposed
-                        </p>
+                        <h5 class="card-title">Value : {{ air_condition.temperature }} °C</h5>
+                        <h6 class="card-title">{{ air_condition.date|date('d/m/Y H:i:s') }}</h6>
                         <a href="#" class="btn btn-dark">Refresh</a>
                     </div>
                 </div>
             </div>
+
             <div class="col-sm-3">
-                <div class="card text-dark bg-info mb-3">
+                <div class="card text-dark bg-primary mb-3">
                     <div class="card-header">
                         <div class="h-100 d-flex flex-row ">
-                            <i class=" bi bi-moisture" style="font-size: 30px"></i>
-                            <h3 class="h3 mx-1 my-auto">Water level</h3>
+                            <i class="bi bi-droplet-fill" style="font-size: 30px"></i>
+                            <h3 class="h3 mx-1 my-auto">Humidity</h3>
                         </div>
                     </div>
                     <div class="card-body">
-                        <h5 class="card-title">Value : 1.3 L</h5>
-                        <p>
-                            If the water level is empty, the system will stop working, so recharge it often
-                        </p>
+                        <h5 class="card-title">Value : {{ air_condition.humidity }} %</h5>
+                        <h6 class="card-title">{{ air_condition.date|date('d/m/Y H:i:s') }}</h6>
                         <a href="#" class="btn btn-dark">Refresh</a>
-
                     </div>
                 </div>
             </div>
+
             <div class="col-sm-3">
                 <div class="card text-dark bg-success mb-3">
                     <div class="card-header">
@@ -57,74 +53,53 @@
 
                     </div>
                     <div class="card-body">
-                        <h5 class="card-title">Value : 3.44 Pa</h5>
-                        <p>
-                            The air pressure is not essential, but be careful all the same
-                        </p>
+                        <h5 class="card-title">Value : {{ air_condition.atmosphericPressure }} Pa</h5>
+                        <h6 class="card-title">{{ air_condition.date|date('d/m/Y H:i:s') }}</h6>
                         <a href="#" class="btn btn-dark">Refresh</a>
-
                     </div>
                 </div>
             </div>
+
             <div class="col-sm-3">
-                <div class="card text-dark bg-primary mb-3">
+                <div class="card text-dark bg-info mb-3">
                     <div class="card-header">
                         <div class="h-100 d-flex flex-row ">
-                            <i class="bi bi-droplet-fill" style="font-size: 30px"></i>
-                            <h3 class="h3 mx-1 my-auto">Humidity</h3>
+                            <i class=" bi bi-moisture" style="font-size: 30px"></i>
+                            <h3 class="h3 mx-1 my-auto">Water level</h3>
                         </div>
                     </div>
                     <div class="card-body">
-                        <h5 class="card-title">Value : 50 %</h5>
-                        <p>
-                            the humidity in the air can sometimes influence the growth of your plants
-                        </p>
+                        <h5 class="card-title">Value : {{ water_level.level }} % of the container</h5>
+                        <h6 class="card-title">{{ water_level.date|date('d/m/Y H:i:s') }}</h6>
                         <a href="#" class="btn btn-dark">Refresh</a>
-
                     </div>
                 </div>
             </div>
         </div>
 
-
         <table class="table table-striped table-bordered">
             <thead>
-            <div class="border rounded-top">
-                <h3 class="px-2 my-2">Irrigation history</h3>
-            </div>
+                <div class="border rounded-top">
+                    <h3 class="px-2 my-2">Irrigation history</h3>
+                </div>
 
-            <tr>
-                <th scope="col">#</th>
-                <th scope="col">First</th>
-                <th scope="col">Last</th>
-                <th scope="col">Handle</th>
-            </tr>
+                <tr>
+                    <th>Watering start date</th>
+                    <th>Air condition</th>
+                    <th>Watering end date</th>
+                    <th>Duration</th>
+                </tr>
             </thead>
             <tbody>
-            <tr>
-                <th scope="row">1</th>
-                <td>Mark</td>
-                <td>Otto</td>
-                <td>@mdo</td>
-            </tr>
-            <tr>
-                <th scope="row">2</th>
-                <td>Jacob</td>
-                <td>Thornton</td>
-                <td>@fat</td>
-            </tr>
-
-            <tr>
-                <th scope="row">2</th>
-                <td>Jacob</td>
-                <td>Thornton</td>
-                <td>@fat</td>
-            </tr>
-
+                {% for irrigation in irrigations %}
+                    <tr>
+                        <td>{{ irrigation.wateringStartDate|date('d/m/Y H:i:s') }}</td>
+                        <th>{{ irrigationAirConditions[irrigation.id] }}</th>
+                        <td>{{ irrigation.wateringEndDate|date('d/m/Y H:i:s') }}</td>
+                        <td>{{ irrigation.duration ?? "En cours" }}</td>
+                    </tr>
+                {% endfor %}
             </tbody>
         </table>
-
     </div>
-
-
 {% endblock %}
