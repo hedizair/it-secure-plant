@@ -17,8 +17,8 @@
 
 AsyncWebServer server(80);
 
-const char* ssid = "DrMundo";
-const char* password = "olafessdroite";
+const char* ssid = "...";
+const char* password = "YOSHA!!!!!";
 
 const char* PARAM_MESSAGE = "message";
 
