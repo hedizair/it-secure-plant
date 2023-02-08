@@ -12,6 +12,17 @@
 #include <HTTPClient.h>
 #include "time.h"
 
+
+#ifdef ESP32
+#include <AsyncTCP.h>
+#elif defined(ESP8266)
+#include <ESP8266WiFi.h>
+#include <ESPAsyncTCP.h>
+#endif
+#include <ESPAsyncWebServer.h>
+
+
+
 #define USE_SERIAL Serial
 
 #ifdef ARDUINO_SAMD_VARIANT_COMPLIANCE
@@ -35,7 +46,18 @@ const char* ntpServer = "pool.ntp.org";
 const long  gmtOffset_sec = 3600 * 1;
 const int   daylightOffset_sec = 3600 * 0;
 
+const char* ssid = "...";
+const char* password = "YOSHA!!!!!";
+
 WiFiMulti wifiMulti;
+
+AsyncWebServer server(80);
+
+const char* PARAM_MESSAGE = "message";
+
+void notFound(AsyncWebServerRequest *request) {
+    request->send(404, "text/plain", "Not found");
+}
 
 
 void setup() {
@@ -45,23 +67,39 @@ void setup() {
     USE_SERIAL.println();
     USE_SERIAL.println();
     USE_SERIAL.println();
-
-    for(uint8_t t = 4; t > 0; t--) {
-        USE_SERIAL.printf("[SETUP] WAIT %d...\n", t);
-        USE_SERIAL.flush();
-        delay(1000);
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(ssid, password);
+    if (WiFi.waitForConnectResult() != WL_CONNECTED) {
+        Serial.printf("WiFi Failed!\n");
+        return;
     }
 
-    wifiMulti.addAP("...", "YOSHA!!!!!");
+    Serial.print("IP Address: ");
+    Serial.println(WiFi.localIP());
+
+
     configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
     Wire.begin(); // Start water level sensor
+
+    server.on("/water_level/refresh", HTTP_GET, [] (AsyncWebServerRequest *request) {
+        String message = "Water level has been updated";
+        if (WiFi.waitForConnectResult() == WL_CONNECTED) {
+          postWaterLevel();
+          request->send(200, "text/plain", message);
+          return;
+        }
+        request->send(500, "text/plain", "Error");
+    });
+
+    server.onNotFound(notFound);
+
+    server.begin();
 }
 
 void loop() {
     
-    
-    if((wifiMulti.run() == WL_CONNECTED)) {
-      postWaterLevel();
+    if (WiFi.waitForConnectResult() == WL_CONNECTED) {
+      // postWaterLevel();
     }
 
     delay(5000);
