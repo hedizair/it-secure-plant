@@ -19,7 +19,7 @@ class Area
     #[ORM\Column(length: 255)]
     private ?string $exposure = null;
 
-    #[ORM\Column(length: 255, nullable: true)]
+    #[ORM\Column(length: 255, nullable: false)]
     private ?string $information = null;
 
     public function getId(): ?int
