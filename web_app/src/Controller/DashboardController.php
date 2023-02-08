@@ -20,7 +20,7 @@ class DashboardController extends AbstractController
         $preference = $preferenceRepository->find(1);
         $plant = $plantRepository->find($preference->getPlant());
         $area = $areaRepository->find($preference->getArea());
-        $airCondition = $airConditionRepository->findOneBy([], ['id' => 'desc']);
+        $airCondition = $airConditionRepository->findOneBy(["area" => $area], ['id' => 'desc']);
         $waterLevel = $waterLevelRepository->findOneBy([], ['id' => 'desc']);
 
         $irrigations = $irrigationRepository->findBy([
