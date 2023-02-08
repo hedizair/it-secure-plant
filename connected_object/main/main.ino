@@ -1,13 +1,28 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <Arduino_JSON.h>
+#include <Arduino.h>
+#ifdef ESP32
+#include <AsyncTCP.h>
+#elif defined(ESP8266)
+#include <ESP8266WiFi.h>
+#include <ESPAsyncTCP.h>
+#endif
+#include <ESPAsyncWebServer.h>
 
+AsyncWebServer server(80);
+
+const char* PARAM_MESSAGE = "message";
+
+void notFound(AsyncWebServerRequest *request) {
+    request->send(404, "text/plain", "Not found");
+}
 
 const char* ssid = "DrMundo";
 const char* password = "olafessdroite";
 const int pinLight = A0;   
 const char* apitest = "https://euw1.api.riotgames.com/lol/summoner/v4/summoners/by-name/Boinananas?api_key=RGAPI-e90613ab-c3d2-4ec5-bc14-0ed45ffc6e16";
-const char* serverName = "192.168.227.80";
+const char* serverName = "https://perso.univ-lyon1.fr/lionel.buathier/time";
 
 String sensorReadings;
 
@@ -30,14 +45,10 @@ void setup() {
     Serial.println(WiFi.localIP()); 
 
 
-
 }
 
 void loop() {
-  // Seri al.println(analogRead(pinLight));
-    //Send an HTTP POST request every 10 seconds
- 
-    //Check WiFi connection status
+
     delay(2000);
     if(WiFi.status()== WL_CONNECTED){
 
