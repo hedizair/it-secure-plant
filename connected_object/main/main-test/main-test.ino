@@ -74,7 +74,7 @@ void loop() {
         USE_SERIAL.print("[HTTP] begin...\n");
         // configure traged server and url
         //http.begin("https://www.howsmyssl.com/a/check", ca); //HTTPS
-        http.begin("http://example.com/index.html"); //HTTP
+        http.begin("192.168.98.105:8444/api/plants"); //HTTP
 
         USE_SERIAL.print("[HTTP] GET...\n");
         // start connection and send HTTP header
