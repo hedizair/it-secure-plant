@@ -1,0 +1,19 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Preference{% endblock %}
+
+{% block main %}
+    <div class="container pt-5 d-flex justify-content-center" id="profile">
+        <div class="card mb-4 rounded-3 shadow-sm w-50">
+            <div class="card-header py-3">
+                <h4 class="my-0 fw-normal">Your preferences</h4>
+            </div>
+            <div class="card-body text-center">
+                {{ form_start(form) }}
+                {{ form_widget(form) }}
+                <button class="btn btn-primary mt-4">{{ button_label|default('Save') }}</button>
+                {{ form_end(form) }}
+            </div>
+        </div>
+    </div>
+{% endblock %}

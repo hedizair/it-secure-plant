@@ -34,15 +34,16 @@ class DashboardController extends AbstractController
 
             foreach($irrigations as $irrigation)
             {
-                $airCondition = $airConditionRepository->find($irrigation->getAirCondition());
+                $airConditionTmp = $airConditionRepository->find($irrigation->getAirCondition());
 
-                $irrigationAirConditions[$irrigation->getId()] = $airCondition->getTemperature() . " °C / " . $airCondition->getHumidity() . " % / " . $airCondition->getAtmosphericPressure() . " Pa";
+                $irrigationAirConditions[$irrigation->getId()] = $airConditionTmp->getTemperature() . " °C / " . $airConditionTmp->getHumidity() . " % / " . $airConditionTmp->getAtmosphericPressure() . " Pa";
             }
         }
 
         return $this->render('dashboard/index.html.twig', [
             'plant' => $plant,
             'area' => $area,
+            'preference' => $preference,
             'air_condition' => $airCondition,
             'water_level' => $waterLevel,
             'irrigations' => $irrigations,

@@ -4,10 +4,12 @@
 
 {% block main %}
     <div class="container mt-5">
-        <div class="mb-5">
-            <h1 class="text-center">Your Dashboard</h1>
-            <h2 class="text-center">Plant : {{ plant.name }}</h2>
-            <h3 class="text-center">Area : {{ area.name }}</h3>
+        <div class="mb-5 text-center">
+            <h1 class="text-center mb-2">Your Dashboard</h1>
+            <h4 class="text-center">Plant : {{ plant.name }}</h4>
+            <h5 class="text-center">Area : {{ area.name }}</h5>
+            <h6 class="text-center">IP of ESP32 : {{ preference.ip }}</h6>
+            <a href="{{ path('app_preference_edit', {"id": 1}) }}" class="btn btn-secondary mt-2">Modify your preferences</a>
         </div>
 
         <div class="row">
@@ -22,7 +24,7 @@
                     <div class="card-body">
                         <h5 class="card-title">Value : {{ air_condition.temperature }} °C</h5>
                         <h6 class="card-title">{{ air_condition.date|date('d/m/Y H:i:s') }}</h6>
-                        <a href="#" class="btn btn-dark">Refresh</a>
+                        <a href="{{ path('app_air_condition_refresh') }}" class="btn btn-dark">Refresh air condition</a>
                     </div>
                 </div>
             </div>
@@ -38,7 +40,7 @@
                     <div class="card-body">
                         <h5 class="card-title">Value : {{ air_condition.humidity }} %</h5>
                         <h6 class="card-title">{{ air_condition.date|date('d/m/Y H:i:s') }}</h6>
-                        <a href="#" class="btn btn-dark">Refresh</a>
+                        <a href="{{ path('app_air_condition_refresh') }}" class="btn btn-dark">Refresh air condition</a>
                     </div>
                 </div>
             </div>
@@ -55,7 +57,7 @@
                     <div class="card-body">
                         <h5 class="card-title">Value : {{ air_condition.atmosphericPressure }} Pa</h5>
                         <h6 class="card-title">{{ air_condition.date|date('d/m/Y H:i:s') }}</h6>
-                        <a href="#" class="btn btn-dark">Refresh</a>
+                        <a href="{{ path('app_air_condition_refresh') }}" class="btn btn-dark">Refresh air condition</a>
                     </div>
                 </div>
             </div>
@@ -71,7 +73,7 @@
                     <div class="card-body">
                         <h5 class="card-title">Value : {{ water_level.level }} % of the container</h5>
                         <h6 class="card-title">{{ water_level.date|date('d/m/Y H:i:s') }}</h6>
-                        <a href="#" class="btn btn-dark">Refresh</a>
+                        <a href="{{ path('app_water_level_refresh') }}" class="btn btn-dark">Refresh water level</a>
                     </div>
                 </div>
             </div>

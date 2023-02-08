@@ -19,9 +19,6 @@ class WaterLevel
     #[ORM\Column]
     private ?float $level = null;
 
-    #[ORM\Column]
-    private ?float $threshold = null;
-
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     private ?\DateTimeInterface $date = null;
 
@@ -38,18 +35,6 @@ class WaterLevel
     public function setLevel(float $level): self
     {
         $this->level = $level;
-
-        return $this;
-    }
-
-    public function getThreshold(): ?float
-    {
-        return $this->threshold;
-    }
-
-    public function setThreshold(float $threshold): self
-    {
-        $this->threshold = $threshold;
 
         return $this;
     }
