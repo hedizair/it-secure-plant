@@ -55,7 +55,7 @@
 
                     </div>
                     <div class="card-body">
-                        <h5 class="card-title">Value : {{ air_condition.atmosphericPressure }} Pa</h5>
+                        <h5 class="card-title">Value : {{ air_condition.atmosphericPressure }} hPa</h5>
                         <h6 class="card-title">{{ air_condition.date|date('d/m/Y H:i:s') }}</h6>
                         <a href="{{ path('app_air_condition_refresh') }}" class="btn btn-dark">Refresh air condition</a>
                     </div>

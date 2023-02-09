@@ -1,20 +1,20 @@
-/**
- * BasicHTTPClient.ino
- *
- *  Created on: 24.05.2015
- *
- */
-
 #include <Arduino.h>
+
+#include "time.h"
+
 #include <Wire.h>
+
 #include <WiFi.h>
 #include <HTTPClient.h>
-#include "time.h"
 
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 
+#include "seeed_bme680.h"
 
+#define IIC_ADDR  uint8_t(0x76)
+
+Seeed_BME680 bme680(IIC_ADDR);
 
 #define USE_SERIAL Serial
 
@@ -27,13 +27,10 @@
 unsigned char low_data[8] = {0};
 unsigned char high_data[12] = {0};
  
- 
 #define NO_TOUCH       0xFE
 #define THRESHOLD      100
 #define ATTINY1_HIGH_ADDR   0x78
 #define ATTINY2_LOW_ADDR   0x77
- 
-
 
 const char* ntpServer = "pool.ntp.org";
 const long  gmtOffset_sec = 3600 * 1;
@@ -41,7 +38,6 @@ const int   daylightOffset_sec = 3600 * 0;
 
 // const char* ssid = "-.-";
 // const char* password = "05052002";
-
 const char* ssid = "...";
 const char* password = "YOSHA!!!!!";
 
@@ -49,21 +45,21 @@ const int sensorPin = 36;
 int sensorValue = 0;
 const int pinPump = 14; 
 
-
-
 AsyncWebServer server(80);
-
-
-void notFound(AsyncWebServerRequest *request) {
-    request->send(404, "text/plain", "Not found");
-}
-
 
 void setup() {    
     Serial.begin(9600);
+
     configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-    pinMode(pinPump, OUTPUT);
+
+    pinMode(pinPump, OUTPUT); // Start pump
+
     Wire.begin(); // Start water level sensor
+
+    while (!bme680.init()) { // Start BME sensor
+        Serial.println("bme680 init failed ! can't find device!");
+        delay(500);
+    }
 
     WiFi.mode(WIFI_STA);
     WiFi.begin(ssid, password);
@@ -77,7 +73,7 @@ void setup() {
 
     server.on("/water_level/refresh", HTTP_GET, [] (AsyncWebServerRequest *request) {
         //postWaterLevel();
-        // Probablement postWaterLevel qui fait bloquer
+        // Probablement postWaterLevel qui fait bloquer -- Essayer avec un thread
         request->send(200, "text/plain",  "Water level has been updated");
     });
 
@@ -86,12 +82,12 @@ void setup() {
 }
 
 void loop() {
-    
     sensorValue = analogRead(sensorPin);
     //Serial.println(sensorValue);
 
     if(sensorValue < 200)
     {
+      bme();
       digitalWrite(pinPump, HIGH);
       //Serial.println("HIGH");
     }
@@ -101,18 +97,14 @@ void loop() {
       //Serial.println("LOW");
     } 
 
-    //Serial.println("");
-
-    
-
-    //if (WiFi.waitForConnectResult() == WL_CONNECTED) {
-       // postWaterLevel();
-    //}
-
     delay(1000);
 }
 
 /*********** API QUERY *************/
+
+void notFound(AsyncWebServerRequest *request) {
+    request->send(404, "text/plain", "Not found");
+}
 
 void sendDataToApi(String json, char* serverName){
   HTTPClient http;
@@ -127,9 +119,7 @@ void sendDataToApi(String json, char* serverName){
   Serial.print("HTTP Response code: ");
   Serial.println(httpResponseCode);
     
-
   http.end();
-
 }
 
 void postWaterLevel(){
@@ -140,7 +130,6 @@ void postWaterLevel(){
 
   char time[20];
   getLocalTime(time);
-
 
   String waterLevelString = waterLevel;
   String timeString = time;
@@ -165,10 +154,7 @@ void getLocalTime(char* timeToSet){
     }
 }
 
-
-/**************************************/
-
-/*****WATER LEVEL SENSOR*****/
+/*********** WATER LEVEL SENSOR *************/
 
 void getHigh12SectionValue(void)
 {
@@ -193,7 +179,6 @@ void getLow8SectionValue(void)
   }
   delay(10);
 }
-
 
 void check(char* waterLevel)
 {
@@ -223,7 +208,6 @@ void check(char* waterLevel)
     }
   }
 
-
   for (int i = 0; i < 12; i++)
   {
 
@@ -238,7 +222,6 @@ void check(char* waterLevel)
       Serial.print("PASS");
     }
   }
-
 
   for (int i = 0 ; i < 8; i++) {
     if (low_data[i] > THRESHOLD) {
@@ -264,10 +247,26 @@ void check(char* waterLevel)
   SERIAL.println("*********************************************************");*/
 
   itoa(trig_section * 5, waterLevel, 10);
-  
-  
+
 }
  
-/******************************/
+/*********** BME SENSOR *************/
+
+void bme()
+{
+    if (bme680.read_sensor_data()) {
+        Serial.println("Failed to perform reading :(");
+        return;
+    }
+
+    Serial.print(bme680.sensor_result_value.temperature);
+    Serial.println(" °C");
+
+    Serial.print(bme680.sensor_result_value.humidity);
+    Serial.println(" %");
+
+    Serial.print(bme680.sensor_result_value.pressure / 100.0);
+    Serial.println(" HPa");
+}
 
 
