@@ -1,11 +1,11 @@
 const int sensorPin = A0;
 int sensorValue = 0;
 
-const int pinPump = D4; 
+const int pinPump = 15; 
 
 void setup() {
     Serial.begin(9600);
-    pinMode(pinLight, OUTPUT);
+    pinMode(pinPump, OUTPUT);
 }
 
 void loop() {
@@ -15,11 +15,15 @@ void loop() {
     if(sensorValue < 200)
     {
       digitalWrite(pinPump, HIGH);
+      Serial.println("HIGH");
     }
     else 
     {
       digitalWrite(pinPump, LOW);
+      Serial.println("LOW");
     }
 
-    delay(10000);
+    Serial.println("");
+
+    delay(1000);
 }
