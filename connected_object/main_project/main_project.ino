@@ -8,17 +8,10 @@
 #include <Arduino.h>
 #include <Wire.h>
 #include <WiFi.h>
-#include <WiFiMulti.h>
 #include <HTTPClient.h>
 #include "time.h"
 
-
-#ifdef ESP32
 #include <AsyncTCP.h>
-#elif defined(ESP8266)
-#include <ESP8266WiFi.h>
-#include <ESPAsyncTCP.h>
-#endif
 #include <ESPAsyncWebServer.h>
 
 
@@ -46,63 +39,77 @@ const char* ntpServer = "pool.ntp.org";
 const long  gmtOffset_sec = 3600 * 1;
 const int   daylightOffset_sec = 3600 * 0;
 
+// const char* ssid = "-.-";
+// const char* password = "05052002";
+
 const char* ssid = "...";
 const char* password = "YOSHA!!!!!";
 
-WiFiMulti wifiMulti;
+const int sensorPin = 36;
+int sensorValue = 0;
+const int pinPump = 14; 
+
+
 
 AsyncWebServer server(80);
 
-const char* PARAM_MESSAGE = "message";
 
 void notFound(AsyncWebServerRequest *request) {
     request->send(404, "text/plain", "Not found");
 }
 
 
-void setup() {
+void setup() {    
+    Serial.begin(9600);
+    configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+    pinMode(pinPump, OUTPUT);
+    Wire.begin(); // Start water level sensor
 
-    USE_SERIAL.begin(115200);
-
-    USE_SERIAL.println();
-    USE_SERIAL.println();
-    USE_SERIAL.println();
     WiFi.mode(WIFI_STA);
     WiFi.begin(ssid, password);
-    if (WiFi.waitForConnectResult() != WL_CONNECTED) {
-        Serial.printf("WiFi Failed!\n");
-        return;
+    while (WiFi.status() != WL_CONNECTED) {
+        Serial.printf("Connexion en cours ...\n");
+        delay(500);
     }
-
+    Serial.printf("Connecté !\n");
     Serial.print("IP Address: ");
     Serial.println(WiFi.localIP());
 
-
-    configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-    Wire.begin(); // Start water level sensor
-
     server.on("/water_level/refresh", HTTP_GET, [] (AsyncWebServerRequest *request) {
-        String message = "Water level has been updated";
-        if (WiFi.waitForConnectResult() == WL_CONNECTED) {
-          postWaterLevel();
-          request->send(200, "text/plain", message);
-          return;
-        }
-        request->send(500, "text/plain", "Error");
+        //postWaterLevel();
+        // Probablement postWaterLevel qui fait bloquer
+        request->send(200, "text/plain",  "Water level has been updated");
     });
 
     server.onNotFound(notFound);
-
     server.begin();
 }
 
 void loop() {
     
-    if (WiFi.waitForConnectResult() == WL_CONNECTED) {
-      // postWaterLevel();
-    }
+    sensorValue = analogRead(sensorPin);
+    //Serial.println(sensorValue);
 
-    delay(5000);
+    if(sensorValue < 200)
+    {
+      digitalWrite(pinPump, HIGH);
+      //Serial.println("HIGH");
+    }
+    else 
+    {
+      digitalWrite(pinPump, LOW);
+      //Serial.println("LOW");
+    } 
+
+    //Serial.println("");
+
+    
+
+    //if (WiFi.waitForConnectResult() == WL_CONNECTED) {
+       // postWaterLevel();
+    //}
+
+    delay(1000);
 }
 
 /*********** API QUERY *************/
@@ -126,7 +133,7 @@ void sendDataToApi(String json, char* serverName){
 }
 
 void postWaterLevel(){
-  char* serverName = "http://192.168.43.174:8444/api/water_levels";
+  char* serverName = "http://192.168.43.174:8888/api/water_levels";
   char waterLevel[5];
 
   check(waterLevel);
