@@ -10,6 +10,8 @@
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 
+#include <pthread.h>
+
 #include "seeed_bme680.h"
 
 #define IIC_ADDR  uint8_t(0x76)
@@ -45,10 +47,48 @@ const int sensorPin = 36;
 int sensorValue = 0;
 const int pinPump = 14; 
 
+bool postSent = false;
+
 AsyncWebServer server(80);
+
+
+void *sendRequest(void *argHttp){
+   AsyncWebServerRequest *request = (AsyncWebServerRequest*)argHttp;  
+   request->send(200, "text/plain",  "Water level has been updated");    
+} 
+
+
+void *postWaterLevel(void *argHttp){
+  postSent = false;
+  //AsyncWebServerRequest *request = (AsyncWebServerRequest*)argHttp;  
+  
+
+  
+  char* serverName = "http://192.168.43.174:8444/api/water_levels";
+  char waterLevel[5];
+
+  check(waterLevel);
+
+  char time[20];
+  getLocalTime(time);
+
+  String waterLevelString = waterLevel;
+  String timeString = time;
+
+  String httpRequestData = "{\"level\":"+ waterLevelString + ",\"date\":\""+ timeString + "\"}";
+  Serial.println(httpRequestData);  
+  sendDataToApi(httpRequestData, serverName);
+  postSent = true;
+
+
+ 
+}
+
 
 void setup() {    
     Serial.begin(9600);
+
+
 
     configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
 
@@ -72,10 +112,24 @@ void setup() {
     Serial.println(WiFi.localIP());
 
     server.on("/water_level/refresh", HTTP_GET, [] (AsyncWebServerRequest *request) {
-        //postWaterLevel();
-        // Probablement postWaterLevel qui fait bloquer -- Essayer avec un thread
-        request->send(200, "text/plain",  "Water level has been updated");
+      pthread_t httpThread;
+      pthread_create(&httpThread, NULL, postWaterLevel, (void*)&request);
+      //pthread_join(httpThread, NULL);
+      
+      request->send(200, "text/plain",  "Water level has been updated");
     });
+
+  
+
+    server.on("/air_condition/refresh", HTTP_GET, [] (AsyncWebServerRequest *request) {
+      pthread_t httpThread;
+      pthread_create(&httpThread, NULL, postBME, NULL);
+      //pthread_join(httpThread, NULL);
+      
+      request->send(200, "text/plain",  "Water level has been updated");
+    });
+
+   
 
     server.onNotFound(notFound);
     server.begin();
@@ -87,7 +141,7 @@ void loop() {
 
     if(sensorValue < 200)
     {
-      bme();
+      // postBME();
       digitalWrite(pinPump, HIGH);
       //Serial.println("HIGH");
     }
@@ -122,22 +176,6 @@ void sendDataToApi(String json, char* serverName){
   http.end();
 }
 
-void postWaterLevel(){
-  char* serverName = "http://192.168.43.174:8888/api/water_levels";
-  char waterLevel[5];
-
-  check(waterLevel);
-
-  char time[20];
-  getLocalTime(time);
-
-  String waterLevelString = waterLevel;
-  String timeString = time;
-
-  String httpRequestData = "{\"level\":"+ waterLevelString + ",\"date\":\""+ timeString + "\"}";
-  Serial.println(httpRequestData);  
-  sendDataToApi(httpRequestData, serverName);
-}
 
 void getLocalTime(char* timeToSet){
     struct tm timeinfo;
@@ -252,21 +290,49 @@ void check(char* waterLevel)
  
 /*********** BME SENSOR *************/
 
-void bme()
-{
-    if (bme680.read_sensor_data()) {
-        Serial.println("Failed to perform reading :(");
-        return;
-    }
+void *postBME(void *arg){
+  char* serverName = "http://192.168.43.174:8888/api/air_conditions";
+  char temperature[5];
+  char humidity[5];
+  char pressure[5];
 
-    Serial.print(bme680.sensor_result_value.temperature);
-    Serial.println(" °C");
+  bme(temperature, humidity, pressure);
 
-    Serial.print(bme680.sensor_result_value.humidity);
-    Serial.println(" %");
+  char time[20];
+  getLocalTime(time);
 
-    Serial.print(bme680.sensor_result_value.pressure / 100.0);
-    Serial.println(" HPa");
+  String temperatureString = temperature;
+  String humidityString = humidity;
+  String pressureString = pressure;
+  String areaString = "1";
+  String timeString = time;
+
+  String httpRequestData = "{\"temperature\":"+ temperatureString + ",\"humidity\":\""+ humidityString + ",\"atmospheric_pressure\":\""+ pressureString + ",\"area\":\""+ areaString + ",\"date\":\""+ timeString + "\"}";
+  Serial.println(httpRequestData);
+  sendDataToApi(httpRequestData, serverName);
 }
 
+void bme(char* temperature, char* humidity, char* pressure)
+{
+  if (bme680.read_sensor_data()) {
+    Serial.println("Failed to perform reading :(");
+    return;
+  }
+
+  double t = bme680.sensor_result_value.temperature;
+  Serial.println(t);
+  Serial.print(" C");
+
+  double h = bme680.sensor_result_value.humidity;
+  Serial.println(h);
+  Serial.print(" %");
+
+  double p = bme680.sensor_result_value.pressure / 100.0;
+  Serial.println(p);
+  Serial.print(" HPa");
+
+  itoa(t, temperature, 10);
+  itoa(h, humidity, 10);
+  itoa(p, pressure, 10);
+}
 
