@@ -22,10 +22,10 @@ class AirConditionController extends AbstractController
     {
         $preference = $preferenceRepository->find(1);
         //$ip = $preference->getIp();
-        $ip = "lionel.buathier.perso.univ-lyon1.fr/time";
+        $ip = $preference->getIp();
 
         $client = HttpClient::create();
-        $response = $client->request('GET', 'http://'.$ip.'/');
+        $response = $client->request('GET', 'http://'.$ip.'/air_condition/refresh');
         //$items = $response->toArray();
         $items = $response->getContent();
 
