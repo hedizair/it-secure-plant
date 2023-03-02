@@ -40,4 +40,9 @@ class AirConditionController extends AbstractController
 
         return $this->redirectToRoute('app_dashboard', [], Response::HTTP_SEE_OTHER);
     }
+    #[Route('/lastId', name: 'app_air_condition_lastId', methods: ['GET'])]
+    public function getLastId(AirConditionRepository $airConditionRepository) {
+        $value = $airConditionRepository->findOneBy([],['id'=>'desc']);
+        return $this->json($value->getId());
+    }
 }

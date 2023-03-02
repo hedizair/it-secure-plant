@@ -28,8 +28,8 @@ class AirCondition
     #[ORM\Column]
     private ?float $atmospheric_pressure = null;
 
-    #[ORM\ManyToOne]
-    private ?Area $area = null;
+    #[ORM\Column]
+    private ?int $area_id = null;
 
     public function getId(): ?int
     {
@@ -84,14 +84,14 @@ class AirCondition
         return $this;
     }
 
-    public function getArea(): ?Area
+    public function getAreaId(): ?int
     {
-        return $this->area;
+        return $this->area_id;
     }
 
-    public function setArea(?Area $area): self
+    public function setAreaId(?int $area_id): self
     {
-        $this->area = $area;
+        $this->area_id = $area_id;
 
         return $this;
     }
