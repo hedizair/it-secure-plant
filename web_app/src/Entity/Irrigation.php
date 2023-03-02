@@ -25,14 +25,14 @@ class Irrigation
     #[ORM\Column(nullable: true)]
     private ?float $duration = null;
 
-    #[ORM\ManyToOne]
-    private ?Plant $plant = null;
+    #[ORM\Column]
+    private ?int $plant_id = 0;
 
-    #[ORM\ManyToOne]
-    private ?Area $area = null;
+    #[ORM\Column]
+    private ?int $area_id = 0;
 
-    #[ORM\OneToOne(cascade: ['persist', 'remove'])]
-    private ?AirCondition $air_condition = null;
+    #[ORM\Column]
+    private ?int $air_condition_id = 0;
 
     public function getId(): ?int
     {
@@ -75,38 +75,38 @@ class Irrigation
         return $this;
     }
 
-    public function getPlant(): ?Plant
+    public function getPlantId(): ?int
     {
-        return $this->plant;
+        return $this->plant_id;
     }
 
-    public function setPlant(?Plant $plant): self
+    public function setPlantId(?int $plant_id): self
     {
-        $this->plant = $plant;
+        $this->plant_id = $plant_id;
 
         return $this;
     }
 
-    public function getArea(): ?Area
+    public function getAreaId(): ?int
     {
-        return $this->area;
+        return $this->area_id;
     }
 
-    public function setArea(?Area $area): self
+    public function setAreaId(?int $area_id): self
     {
-        $this->area = $area;
+        $this->area_id = $area_id;
 
         return $this;
     }
 
-    public function getAirCondition(): ?AirCondition
+    public function getAirConditionId(): ?int
     {
-        return $this->air_condition;
+        return $this->air_condition_id;
     }
 
-    public function setAirCondition(AirCondition $air_condition): self
+    public function setAirConditionId(int $air_condition_id): self
     {
-        $this->air_condition = $air_condition;
+        $this->air_condition_id = $air_condition_id;
 
         return $this;
     }
