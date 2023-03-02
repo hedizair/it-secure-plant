@@ -10,7 +10,11 @@
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 
+#include <pthread.h>
+
 #include "seeed_bme680.h"
+
+#include <Adafruit_NeoPixel.h>
 
 #define IIC_ADDR  uint8_t(0x76)
 
@@ -23,6 +27,12 @@ Seeed_BME680 bme680(IIC_ADDR);
 #else
 #define SERIAL Serial
 #endif
+
+
+#define PIN 15
+#define NUMPIXELS 10
+Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
+#define DELAYVAL 500
  
 unsigned char low_data[8] = {0};
 unsigned char high_data[12] = {0};
@@ -45,10 +55,50 @@ const int sensorPin = 36;
 int sensorValue = 0;
 const int pinPump = 14; 
 
+bool postSent = false;
+
+int currentBMEId = 0;
+
+
 AsyncWebServer server(80);
+
+
+void *sendRequest(void *argHttp){
+   AsyncWebServerRequest *request = (AsyncWebServerRequest*)argHttp;  
+   request->send(200, "text/plain",  "Water level has been updated");    
+} 
+
+
+void *postWaterLevel(void *argHttp){
+  postSent = false;
+  //AsyncWebServerRequest *request = (AsyncWebServerRequest*)argHttp;  
+    
+  char* serverName = "http://192.168.43.174:8444/api/water_levels";
+  char waterLevel[5];
+
+  checkWaterLevel(waterLevel);
+
+  char time[20];
+  getLocalTime(time);
+
+  String waterLevelString = waterLevel;
+  String timeString = time;
+
+  String httpRequestData = "{\"level\":"+ waterLevelString + ",\"date\":\""+ timeString + "\"}";
+  Serial.println(httpRequestData);  
+  sendDataToApi(httpRequestData, serverName);
+  postSent = true;
+
+
+ 
+}
+
 
 void setup() {    
     Serial.begin(9600);
+
+    pixels.begin(); 
+    pixels.setBrightness(50); 
 
     configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
 
@@ -72,32 +122,27 @@ void setup() {
     Serial.println(WiFi.localIP());
 
     server.on("/water_level/refresh", HTTP_GET, [] (AsyncWebServerRequest *request) {
-        //postWaterLevel();
-        // Probablement postWaterLevel qui fait bloquer -- Essayer avec un thread
-        request->send(200, "text/plain",  "Water level has been updated");
+      pthread_t httpThread;
+      pthread_create(&httpThread, NULL, postWaterLevel, (void*)&request);
+      //pthread_join(httpThread, NULL);
+      
+      request->send(200, "text/plain",  "Water level has been updated");
     });
+
+  
+
+    server.on("/air_condition/refresh", HTTP_GET, [] (AsyncWebServerRequest *request) {
+      pthread_t httpThread;
+      pthread_create(&httpThread, NULL, postBME, NULL);
+      //pthread_join(httpThread, NULL);
+      
+      request->send(200, "text/plain",  "Water level has been updated");
+    });
+
+   
 
     server.onNotFound(notFound);
     server.begin();
-}
-
-void loop() {
-    sensorValue = analogRead(sensorPin);
-    //Serial.println(sensorValue);
-
-    if(sensorValue < 200)
-    {
-      bme();
-      digitalWrite(pinPump, HIGH);
-      //Serial.println("HIGH");
-    }
-    else 
-    {
-      digitalWrite(pinPump, LOW);
-      //Serial.println("LOW");
-    } 
-
-    delay(1000);
 }
 
 /*********** API QUERY *************/
@@ -120,23 +165,6 @@ void sendDataToApi(String json, char* serverName){
   Serial.println(httpResponseCode);
     
   http.end();
-}
-
-void postWaterLevel(){
-  char* serverName = "http://192.168.43.174:8888/api/water_levels";
-  char waterLevel[5];
-
-  check(waterLevel);
-
-  char time[20];
-  getLocalTime(time);
-
-  String waterLevelString = waterLevel;
-  String timeString = time;
-
-  String httpRequestData = "{\"level\":"+ waterLevelString + ",\"date\":\""+ timeString + "\"}";
-  Serial.println(httpRequestData);  
-  sendDataToApi(httpRequestData, serverName);
 }
 
 void getLocalTime(char* timeToSet){
@@ -180,7 +208,7 @@ void getLow8SectionValue(void)
   delay(10);
 }
 
-void check(char* waterLevel)
+void checkWaterLevel(char* waterLevel)
 {
   int sensorvalue_min = 250;
   int sensorvalue_max = 255;
@@ -246,27 +274,251 @@ void check(char* waterLevel)
   SERIAL.println(" ");
   SERIAL.println("*********************************************************");*/
 
+
   itoa(trig_section * 5, waterLevel, 10);
+
+  int wl = trig_section * 5;
+
+  waterLevelLighting(wl);
+
 
 }
  
 /*********** BME SENSOR *************/
 
-void bme()
-{
-    if (bme680.read_sensor_data()) {
-        Serial.println("Failed to perform reading :(");
-        return;
-    }
+void *postBME(void *arg){
+  char* serverName = "http://192.168.43.174:8444/api/air_conditions";
 
-    Serial.print(bme680.sensor_result_value.temperature);
-    Serial.println(" °C");
 
-    Serial.print(bme680.sensor_result_value.humidity);
-    Serial.println(" %");
+  char temperature[5];
+  char humidity[5];
+  char pressure[5];
 
-    Serial.print(bme680.sensor_result_value.pressure / 100.0);
-    Serial.println(" HPa");
+  bme(temperature, humidity, pressure);
+
+  char time[20];
+  getLocalTime(time);
+
+  String temperatureString = temperature;
+  String humidityString = humidity;
+  String pressureString = pressure;
+  String timeString = time;
+
+  String httpRequestData = "{\"date\":\""+ timeString + "\",\"temperature\":"+ temperatureString + ",\"humidity\":"+ humidityString + ",\"atmosphericPressure\":"+ pressureString + ",\"areaId\":"+ "3" + "}";
+  Serial.println(httpRequestData);
+  sendDataToApi(httpRequestData, serverName);
 }
+
+String getLastIrrigationId(){
+  HTTPClient http;
+  http.begin("http://192.168.43.174:8444/irrigation/lastId");
+
+  int httpResponseCode = http.GET();
+
+  if(httpResponseCode > 0){
+    String payload = http.getString();
+    http.end();
+    return payload;
+  }
+  else
+  {
+    http.end();
+    return "0";
+  }
+}
+
+void *postIrrigation(String irrigationId){
+  char* serverName = "http://192.168.43.174:8444/api/irrigations";
+
+  char time[20];
+  getLocalTime(time);
+
+  String plantId = "1";
+  String areaId = "1";
+  String timeString = time;
+
+  String httpRequestData = "{\"plantId\":" + plantId + ",\"areaId\":" + areaId + ",\"airConditionId\":" + irrigationId + ",\"wateringStartDate\":\"" + timeString + "\"}";
+  Serial.println(httpRequestData);
+  sendDataToApi(httpRequestData, serverName);
+}
+
+void *patchIrrigation(String id){
+  char buffer[500];
+  const char* value1 = "http://192.168.43.174:8444/irrigation/end/";
+  const char* value2 = id.c_str();
+
+  strcpy(buffer, value1);
+  strcat(buffer, value2);
+
+  char* serverName = buffer;
+
+  Serial.println(serverName);
+
+  char time[20];
+  getLocalTime(time);
+
+  String timeString = time;
+
+  String httpRequestData = "{\"wateringEndDate\":\""+ timeString + "\"}";
+  Serial.println(httpRequestData);
+  sendDataToApi(httpRequestData, serverName);
+}
+
+
+void bme(char* temperature, char* humidity, char* pressure)
+{
+  if (bme680.read_sensor_data()) {
+    Serial.println("Failed to perform reading :(");
+    return;
+  }
+
+  double t = bme680.sensor_result_value.temperature;
+  Serial.println(t);
+  Serial.print(" C");
+
+  double h = bme680.sensor_result_value.humidity;
+  Serial.println(h);
+  Serial.print(" %");
+
+  double p = bme680.sensor_result_value.pressure / 100.0;
+  Serial.println(p);
+  Serial.println(" HPa");
+
+  itoa(t, temperature, 10);
+  itoa(h, humidity, 10);
+  itoa(p, pressure, 10);
+}
+
+String getLastBMEId(){
+  HTTPClient http;
+  http.begin("http://192.168.43.174:8444/air_condition/lastId");
+
+  int httpResponseCode = http.GET();
+
+  if(httpResponseCode > 0){
+    String payload = http.getString();
+    http.end();
+    return payload;
+  }
+  else
+  {
+    http.end();
+    return "0";
+  }
+}
+
+/****** LIGHTS ************************/
+
+void waterLevelLighting(int waterLevel){
+  pixels.clear();
+
+  if(waterLevel < 10){
+    pixels.setPixelColor(0, pixels.Color(255, 0, 0));
+  } else if (waterLevel >= 10 && waterLevel < 20){
+    pixels.setPixelColor(0, pixels.Color(255, 0, 0));
+    pixels.setPixelColor(1, pixels.Color(255, 0, 0));    
+  }else if (waterLevel >= 20 && waterLevel < 30){
+    pixels.setPixelColor(0, pixels.Color(255, 0, 0));
+    pixels.setPixelColor(1, pixels.Color(255, 0, 0));    
+     pixels.setPixelColor(2, pixels.Color(255,140,0));
+  }else if (waterLevel >= 30 && waterLevel < 40){
+    pixels.setPixelColor(0, pixels.Color(255, 0, 0));
+    pixels.setPixelColor(1, pixels.Color(255, 0, 0));    
+    pixels.setPixelColor(2, pixels.Color(255,140,0));
+    pixels.setPixelColor(3, pixels.Color(255,140,0));
+  }else if (waterLevel >= 40 && waterLevel < 50){
+    pixels.setPixelColor(0, pixels.Color(255, 0, 0));
+    pixels.setPixelColor(1, pixels.Color(255, 0, 0));    
+    pixels.setPixelColor(2, pixels.Color(255,140,0));
+    pixels.setPixelColor(3, pixels.Color(255,140,0));
+   pixels.setPixelColor(4, pixels.Color(255,215,0));
+  }else if (waterLevel >= 50 && waterLevel < 60){
+    pixels.setPixelColor(0, pixels.Color(255, 0, 0));
+    pixels.setPixelColor(1, pixels.Color(255, 0, 0));    
+    pixels.setPixelColor(2, pixels.Color(255,140,0));
+    pixels.setPixelColor(3, pixels.Color(255,140,0));
+    pixels.setPixelColor(4, pixels.Color(255,215,0));
+    pixels.setPixelColor(5, pixels.Color(255,215,0));
+  }else if (waterLevel >= 60 && waterLevel < 70){
+    pixels.setPixelColor(0, pixels.Color(255, 0, 0));
+    pixels.setPixelColor(1, pixels.Color(255, 0, 0));    
+    pixels.setPixelColor(2, pixels.Color(255,140,0));
+    pixels.setPixelColor(3, pixels.Color(255,140,0));
+    pixels.setPixelColor(4, pixels.Color(255,215,0));
+    pixels.setPixelColor(5, pixels.Color(255,215,0));
+    pixels.setPixelColor(6, pixels.Color(154,205,50));
+  }else if (waterLevel >= 70 && waterLevel < 80){
+    pixels.setPixelColor(0, pixels.Color(255, 0, 0));
+    pixels.setPixelColor(1, pixels.Color(255, 0, 0));    
+    pixels.setPixelColor(2, pixels.Color(255,140,0));
+    pixels.setPixelColor(3, pixels.Color(255,140,0));
+    pixels.setPixelColor(4, pixels.Color(255,215,0));
+    pixels.setPixelColor(5, pixels.Color(255,215,0));
+    pixels.setPixelColor(6, pixels.Color(154,205,50));
+    pixels.setPixelColor(7, pixels.Color(154,205,50));
+  }else if (waterLevel >= 80 && waterLevel < 90){
+    pixels.setPixelColor(0, pixels.Color(255, 0, 0));
+    pixels.setPixelColor(1, pixels.Color(255, 0, 0));    
+    pixels.setPixelColor(2, pixels.Color(255,140,0));
+    pixels.setPixelColor(3, pixels.Color(255,140,0));
+    pixels.setPixelColor(4, pixels.Color(255,215,0));
+    pixels.setPixelColor(5, pixels.Color(255,215,0));
+    pixels.setPixelColor(6, pixels.Color(154,205,50));
+    pixels.setPixelColor(7, pixels.Color(154,205,50));
+    pixels.setPixelColor(8, pixels.Color(0, 255, 0));
+  }else if (waterLevel >= 90){
+    pixels.setPixelColor(0, pixels.Color(255, 0, 0));
+    pixels.setPixelColor(1, pixels.Color(255, 0, 0));    
+    pixels.setPixelColor(2, pixels.Color(255,140,0));
+    pixels.setPixelColor(3, pixels.Color(255,140,0));
+    pixels.setPixelColor(4, pixels.Color(255,215,0));
+    pixels.setPixelColor(5, pixels.Color(255,215,0));
+    pixels.setPixelColor(6, pixels.Color(154,205,50));
+    pixels.setPixelColor(7, pixels.Color(154,205,50));
+    pixels.setPixelColor(8, pixels.Color(0, 255, 0));
+    pixels.setPixelColor(9, pixels.Color(0, 255, 0));
+  }
+  
+
+  pixels.show();
+}
+
+
+
+
+
+
+
+/****LOOP*/
+
+void loop() {
+    char waterLevel[5];
+    checkWaterLevel(waterLevel);
+
+    sensorValue = analogRead(sensorPin); 
+    if(sensorValue < 200)
+    {
+      postBME(NULL);
+      String airConditionId = getLastBMEId();
+      postIrrigation(airConditionId);
+      String irrigationId = getLastIrrigationId();
+
+      digitalWrite(pinPump, HIGH);
+
+      while(sensorValue < 200) 
+      {
+         sensorValue = analogRead(sensorPin); 
+      }
+      
+      digitalWrite(pinPump, LOW);
+
+      patchIrrigation(irrigationId);
+    }    
+
+    delay(1000);
+}
+
+
+
 
 
