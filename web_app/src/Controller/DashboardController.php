@@ -20,12 +20,12 @@ class DashboardController extends AbstractController
         $preference = $preferenceRepository->find(1);
         $plant = $plantRepository->find($preference->getPlant());
         $area = $areaRepository->find($preference->getArea());
-        $airCondition = $airConditionRepository->findOneBy(["area" => $area], ['id' => 'desc']);
+        $airCondition = $airConditionRepository->findOneBy(["area_id" => $area], ['id' => 'desc']);
         $waterLevel = $waterLevelRepository->findOneBy([], ['id' => 'desc']);
 
         $irrigations = $irrigationRepository->findBy([
-            "plant" => $plant->getId(),
-            "area" => $area->getId()
+            "plant_id" => $plant->getId(),
+            "area_id" => $area->getId()
         ], ['id' => 'desc']);
 
         if(count($irrigations) > 0)
@@ -34,7 +34,7 @@ class DashboardController extends AbstractController
 
             foreach($irrigations as $irrigation)
             {
-                $airConditionTmp = $airConditionRepository->find($irrigation->getAirCondition());
+                $airConditionTmp = $airConditionRepository->find($irrigation->getAirConditionId());
 
                 $irrigationAirConditions[$irrigation->getId()] = $airConditionTmp->getTemperature() . " °C / " . $airConditionTmp->getHumidity() . " % / " . $airConditionTmp->getAtmosphericPressure() . " Pa";
             }
