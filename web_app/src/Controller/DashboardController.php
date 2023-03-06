@@ -40,7 +40,7 @@ class DashboardController extends AbstractController
             }
         }
 
-
+        // dd($irrigations);
         // dd($airCondition);
 
         return $this->render('dashboard/index.html.twig', [
