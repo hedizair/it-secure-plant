@@ -23,10 +23,19 @@ class WaterLevelController extends AbstractController
 
         if($result == "Water level has been updated")
         {
-            return $this->redirectToRoute('app_dashboard', [], Response::HTTP_SEE_OTHER);
+            // sleep(3);
+            return $this->redirectToRoute('app_water_level_refresh_temp', [], Response::HTTP_CREATED);
+            // return $this->json('{}');
         }
         else{
             dd("ERREUR !");
         }
+
+    }
+
+    #[Route('/refresh/temp', name: 'app_water_level_refresh_temp', methods: ['GET'])]
+    public function refreshTemp()
+    {
+        return $this->redirectToRoute('app_dashboard');
     }
 }

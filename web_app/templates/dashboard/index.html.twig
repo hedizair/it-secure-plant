@@ -98,7 +98,12 @@
                         <td>{{ irrigation.wateringStartDate|date('d/m/Y H:i:s') }}</td>
                         <th>{{ irrigationAirConditions[irrigation.id] }}</th>
                         <td>{{ irrigation.wateringEndDate|date('d/m/Y H:i:s') }}</td>
-                        <td>{{ irrigation.duration ?? "En cours" }}</td>
+                        {% if irrigation.duration %}
+                            <td>{{ irrigation.duration }} sec</td>
+                        {% else %}
+                            <td>En cours</td>
+                        {% endif %}
+
                     </tr>
                 {% endfor %}
             </tbody>
