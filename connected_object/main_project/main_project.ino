@@ -1,24 +1,13 @@
 #include <Arduino.h>
-
 #include "time.h"
-
 #include <Wire.h>
-
 #include <WiFi.h>
 #include <HTTPClient.h>
-
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
-
 #include <pthread.h>
-
 #include "seeed_bme680.h"
-
 #include <Adafruit_NeoPixel.h>
-
-#define IIC_ADDR  uint8_t(0x76)
-
-Seeed_BME680 bme680(IIC_ADDR);
 
 #define USE_SERIAL Serial
 
@@ -28,52 +17,52 @@ Seeed_BME680 bme680(IIC_ADDR);
 #define SERIAL Serial
 #endif
 
-
-#define PIN 15
-#define NUMPIXELS 10
-Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
-#define DELAYVAL 500
- 
-unsigned char low_data[8] = {0};
-unsigned char high_data[12] = {0};
- 
-#define NO_TOUCH       0xFE
 #define THRESHOLD      100
 #define ATTINY1_HIGH_ADDR   0x78
 #define ATTINY2_LOW_ADDR   0x77
+#define PIN 15
+#define NUMPIXELS 10
+#define IIC_ADDR  uint8_t(0x76)
 
+Adafruit_NeoPixel pixels(NUMPIXELS, PIN, NEO_GRB + NEO_KHZ800);
+Seeed_BME680 bme680(IIC_ADDR);
+
+
+unsigned char low_data[8] = {0};
+unsigned char high_data[12] = {0};
+  
 const char* ntpServer = "pool.ntp.org";
 const long  gmtOffset_sec = 3600 * 1;
 const int   daylightOffset_sec = 3600 * 0;
 
-// const char* ssid = "-.-";
-// const char* password = "05052002";
 const char* ssid = "...";
 const char* password = "YOSHA!!!!!";
+const char* ipServer = "http://192.168.43.174:8444";
+
+char* waterLevelsPath = "http://192.168.43.174:8444/api/water_levels";
+char* airContiditionsPath = "http://192.168.43.174:8444/api/air_conditions";
+char* airConditionLastIdPath = "http://192.168.43.174:8444/air_condition/lastId";
+char* irrigationLastIdPath = "http://192.168.43.174:8444/irrigation/lastId";
+char* irrigationsPath = "http://192.168.43.174:8444/api/irrigations";
+char* irrigationEndPath = "http://192.168.43.174:8444/irrigation/end/";
 
 const int sensorPin = 36;
 int sensorValue = 0;
 const int pinPump = 14; 
 
-bool postSent = false;
-
-int currentBMEId = 0;
-
 
 AsyncWebServer server(80);
 
+/*********************** THREAD FUNCTIONS ***********************/
 
 void *sendRequest(void *argHttp){
    AsyncWebServerRequest *request = (AsyncWebServerRequest*)argHttp;  
    request->send(200, "text/plain",  "Water level has been updated");    
 } 
 
-
 void *postWaterLevel(void *argHttp){
-  postSent = false;
-  //AsyncWebServerRequest *request = (AsyncWebServerRequest*)argHttp;  
     
-  char* serverName = "http://192.168.43.174:8444/api/water_levels";
+  char* serverName = waterLevelsPath;
   char waterLevel[5];
 
   checkWaterLevel(waterLevel);
@@ -87,63 +76,9 @@ void *postWaterLevel(void *argHttp){
   String httpRequestData = "{\"level\":"+ waterLevelString + ",\"date\":\""+ timeString + "\"}";
   Serial.println(httpRequestData);  
   sendDataToApi(httpRequestData, serverName);
-  postSent = true;
-
-
- 
 }
 
-
-void setup() {    
-    Serial.begin(9600);
-
-    pixels.begin(); 
-    pixels.setBrightness(50); 
-
-    configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-
-    pinMode(pinPump, OUTPUT); // Start pump
-
-    Wire.begin(); // Start water level sensor
-
-    while (!bme680.init()) { // Start BME sensor
-        Serial.println("bme680 init failed ! can't find device!");
-        delay(500);
-    }
-
-    WiFi.mode(WIFI_STA);
-    WiFi.begin(ssid, password);
-    while (WiFi.status() != WL_CONNECTED) {
-        Serial.printf("Connexion en cours ...\n");
-        delay(500);
-    }
-    Serial.printf("Connecté !\n");
-    Serial.print("IP Address: ");
-    Serial.println(WiFi.localIP());
-
-    server.on("/water_level/refresh", HTTP_GET, [] (AsyncWebServerRequest *request) {
-      pthread_t httpThread;
-      pthread_create(&httpThread, NULL, postWaterLevel, (void*)&request);
-      //pthread_join(httpThread, NULL);
-      
-      request->send(200, "text/plain",  "Water level has been updated");
-    });
-
-  
-
-    server.on("/air_condition/refresh", HTTP_GET, [] (AsyncWebServerRequest *request) {
-      pthread_t httpThread;
-      pthread_create(&httpThread, NULL, postBME, NULL);
-      //pthread_join(httpThread, NULL);
-      
-      request->send(200, "text/plain",  "Water level has been updated");
-    });
-
-   
-
-    server.onNotFound(notFound);
-    server.begin();
-}
+/*********************** ********** ***********************/
 
 /*********** API QUERY *************/
 
@@ -167,22 +102,9 @@ void sendDataToApi(String json, char* serverName){
   http.end();
 }
 
-void getLocalTime(char* timeToSet){
-    struct tm timeinfo;
-    if (!getLocalTime(&timeinfo)) {
-      Serial.println("Failed to obtain time");
-    }
- 
-    char time[20];
-  
-    strftime(time,20, "%Y-%m-%d %H:%M:%S", &timeinfo);
+/*********************** ************ ***********************/
 
-    for(int i=0; i < 20; ++i){
-      timeToSet[i] = time[i];
-    }
-}
-
-/*********** WATER LEVEL SENSOR *************/
+/*********************** WATER LEVEL ***********************/
 
 void getHigh12SectionValue(void)
 {
@@ -268,27 +190,23 @@ void checkWaterLevel(char* waterLevel)
     trig_section++;
     touch_val >>= 1;
   }
-  /*SERIAL.print("water level = ");
-  SERIAL.print(trig_section * 5);
-  SERIAL.println("% ");
-  SERIAL.println(" ");
-  SERIAL.println("*********************************************************");*/
-
 
   itoa(trig_section * 5, waterLevel, 10);
 
   int wl = trig_section * 5;
 
+  
   waterLevelLighting(wl);
 
 
 }
- 
-/*********** BME SENSOR *************/
 
-void *postBME(void *arg){
-  char* serverName = "http://192.168.43.174:8444/api/air_conditions";
+/*********************** ******* ***********************/
 
+/*********************** BME ***********************/
+
+void *postBME(void *argHttp){
+  char* serverName = airContiditionsPath;
 
   char temperature[5];
   char humidity[5];
@@ -306,62 +224,9 @@ void *postBME(void *arg){
 
   String httpRequestData = "{\"date\":\""+ timeString + "\",\"temperature\":"+ temperatureString + ",\"humidity\":"+ humidityString + ",\"atmosphericPressure\":"+ pressureString + ",\"areaId\":"+ "3" + "}";
   Serial.println(httpRequestData);
+
   sendDataToApi(httpRequestData, serverName);
-}
 
-String getLastIrrigationId(){
-  HTTPClient http;
-  http.begin("http://192.168.43.174:8444/irrigation/lastId");
-
-  int httpResponseCode = http.GET();
-
-  if(httpResponseCode > 0){
-    String payload = http.getString();
-    http.end();
-    return payload;
-  }
-  else
-  {
-    http.end();
-    return "0";
-  }
-}
-
-void *postIrrigation(String irrigationId){
-  char* serverName = "http://192.168.43.174:8444/api/irrigations";
-
-  char time[20];
-  getLocalTime(time);
-
-  String plantId = "1";
-  String areaId = "1";
-  String timeString = time;
-
-  String httpRequestData = "{\"plantId\":" + plantId + ",\"areaId\":" + areaId + ",\"airConditionId\":" + irrigationId + ",\"wateringStartDate\":\"" + timeString + "\"}";
-  Serial.println(httpRequestData);
-  sendDataToApi(httpRequestData, serverName);
-}
-
-void *patchIrrigation(String id){
-  char buffer[500];
-  const char* value1 = "http://192.168.43.174:8444/irrigation/end/";
-  const char* value2 = id.c_str();
-
-  strcpy(buffer, value1);
-  strcat(buffer, value2);
-
-  char* serverName = buffer;
-
-  Serial.println(serverName);
-
-  char time[20];
-  getLocalTime(time);
-
-  String timeString = time;
-
-  String httpRequestData = "{\"wateringEndDate\":\""+ timeString + "\"}";
-  Serial.println(httpRequestData);
-  sendDataToApi(httpRequestData, serverName);
 }
 
 
@@ -391,7 +256,7 @@ void bme(char* temperature, char* humidity, char* pressure)
 
 String getLastBMEId(){
   HTTPClient http;
-  http.begin("http://192.168.43.174:8444/air_condition/lastId");
+  http.begin(airConditionLastIdPath);
 
   int httpResponseCode = http.GET();
 
@@ -407,7 +272,70 @@ String getLastBMEId(){
   }
 }
 
-/****** LIGHTS ************************/
+/*********************** *********** ***********************/
+
+
+/*********************** IRRIGATION ***********************/
+
+String getLastIrrigationId(){
+  HTTPClient http;
+  http.begin(irrigationLastIdPath);
+
+  int httpResponseCode = http.GET();
+
+  if(httpResponseCode > 0){
+    String payload = http.getString();
+    http.end();
+    return payload;
+  }
+  else
+  {
+    http.end();
+    return "0";
+  }
+}
+
+void *postIrrigation(String irrigationId){
+  char* serverName = irrigationsPath;
+
+  char time[20];
+  getLocalTime(time);
+
+  String plantId = "1";
+  String areaId = "3";
+  String timeString = time;
+
+  String httpRequestData = "{\"plantId\":" + plantId + ",\"areaId\":" + areaId + ",\"airConditionId\":" + irrigationId + ",\"wateringStartDate\":\"" + timeString + "\"}";
+  Serial.println(httpRequestData);
+  sendDataToApi(httpRequestData, serverName);
+}
+
+void *patchIrrigation(String id){
+  char buffer[500];
+  const char* value1 = irrigationEndPath;
+  const char* value2 = id.c_str();
+
+  strcpy(buffer, value1);
+  strcat(buffer, value2);
+
+  char* serverName = buffer;
+
+  Serial.println(serverName);
+
+  char time[20];
+  getLocalTime(time);
+
+  String timeString = time;
+
+  String httpRequestData = "{\"wateringEndDate\":\""+ timeString + "\"}";
+  Serial.println(httpRequestData);
+  sendDataToApi(httpRequestData, serverName);
+}
+
+/*********************** ******** ***********************/
+
+
+/*********************** LIGHTS ***********************/
 
 void waterLevelLighting(int waterLevel){
   pixels.clear();
@@ -483,19 +411,89 @@ void waterLevelLighting(int waterLevel){
   pixels.show();
 }
 
+/*********************** ******** ***********************/
 
 
+/*********************** OTHERS ***********************/
+
+void getLocalTime(char* timeToSet){
+    struct tm timeinfo;
+    if (!getLocalTime(&timeinfo)) {
+      Serial.println("Failed to obtain time");
+    }
+ 
+    char time[20];
+  
+    strftime(time,20, "%Y-%m-%d %H:%M:%S", &timeinfo);
+
+    for(int i=0; i < 20; ++i){
+      timeToSet[i] = time[i];
+    }
+}
+
+/*********************** ******** ***********************/
 
 
+/*********************** MAIN SETUP ***********************/
+
+void setup() {    
+    Serial.begin(9600);
+
+    pixels.begin(); 
+    pixels.setBrightness(50); 
+
+    configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+
+    pinMode(pinPump, OUTPUT); // Start pump
+
+    Wire.begin(); // Start water level sensor
+
+    while (!bme680.init()) { // Start BME sensor
+        Serial.println("bme680 init failed ! can't find device!");
+        delay(500);
+    }
+
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(ssid, password);
+    while (WiFi.status() != WL_CONNECTED) {
+        Serial.printf("Connexion en cours ...\n");
+        delay(500);
+    }
+    Serial.printf("Connecté !\n");
+    Serial.print("IP Address: ");
+    Serial.println(WiFi.localIP());
+
+    server.on("/water_level/refresh", HTTP_GET, [] (AsyncWebServerRequest *request) {
+      pthread_t httpThread1;
+      pthread_create(&httpThread1, NULL, postWaterLevel, (void*)&request);
+
+      
+      request->send(200, "text/plain",  "Water level has been updated");
+    });
+
+    server.on("/air_condition/refresh", HTTP_GET, [] (AsyncWebServerRequest *request) {
+      pthread_t httpThread2;
+      pthread_create(&httpThread2, NULL, postBME, (void*)&request);
+   
+      
+      request->send(200, "text/plain",  "Air condition has been updated");
+    });
+
+    server.onNotFound(notFound);
+    server.begin();
+}
+
+/*********************** ********** ***********************/
 
 
-/****LOOP*/
+/*********************** MAIN LOOP ***********************/
 
 void loop() {
     char waterLevel[5];
     checkWaterLevel(waterLevel);
 
     sensorValue = analogRead(sensorPin); 
+        
     if(sensorValue < 200)
     {
       postBME(NULL);
